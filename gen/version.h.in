@@ -1,0 +1,11 @@
+#ifndef VW_VERSION_H
+#define VW_VERSION_H
+
+namespace vw
+{
+    const int MajorVersion = @VulkanWrapper_Version_Major@;
+    const int MinorVersion = @VulkanWrapper_Version_Minor@;
+    const int PatchVersion = @VulkanWrapper_Version_Release@;
+}
+
+#endif
