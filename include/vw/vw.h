@@ -3,6 +3,7 @@
 
 #include <vw/exception.h>
 #include <vw/instance.h>
+#include <vw/physicaldevice.h>
 
 namespace vw
 {

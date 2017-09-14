@@ -5,15 +5,17 @@
 int main(int argc, const char * const argv[])
 {
     // Create instance
-    std::cout << "Attempting to create an Instance.\n";
-
     vw::InstanceCreator instanceCtor;
     instanceCtor.setApplicationName("vwTest");
     instanceCtor.setApplicationVersion(1);
 
+    vw::Instance instance;
+
     try
     {
-        vw::Instance instance = instanceCtor.create();
+        std::cout << "Attempting to create an Instance.\n";
+        instance = instanceCtor.create();
+        std::cout << "Successfully created an Instance.\n";
     }
     catch (const vw::Exception& ex)
     {
@@ -22,7 +24,18 @@ int main(int argc, const char * const argv[])
         std::exit(0);
     }
 
-    std::cout << "Successfully created an Instance.\n";
+    vw::Instance::PhysicalDeviceList physicalDevices;
+    physicalDevices = instance.enumeratePhysicalDevices();
+
+    for (auto dev : physicalDevices)
+    {
+        std::cout << "Device " << dev.getDeviceName() << "\n";
+        std::cout << "API version: " << dev.getApiVersion() << "\n";
+        std::cout << "Driver version: " << dev.getDriverVersion() << "\n";
+        std::cout << "Vendor ID: " << dev.getVendorId() << "\n";
+        std::cout << "Device ID: " << dev.getDeviceId() << "\n";
+        std::cout << "Device Type: " << dev.getDeviceType() << "\n\n";
+    }
 
     std::exit(0);
 }

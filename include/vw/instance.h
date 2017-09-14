@@ -6,10 +6,18 @@
 
 namespace vw
 {
+    class PhysicalDevice;
+
     /*! @brief A wrapper for a VkInstance object. */
     class Instance
     {
         public:
+
+            using PhysicalDeviceList = std::vector<PhysicalDevice>;
+
+            /*! @brief Constructs an invalid Instance.
+             */
+            Instance();
 
             /*! @brief Constructs an Instance.
              *  @param handle The Instance object created will assume ownership
@@ -35,12 +43,16 @@ namespace vw
 
             /*! @brief Returns true if the VkInstance handle is not null.
              */
-            operator bool();
+            operator bool() const;
+
+            /*! @brief Returns a list of PhysicalDevices that can be examined.
+             */
+            PhysicalDeviceList enumeratePhysicalDevices();
 
             /*! @brief Retrieves the handle to the underlying VkInstance.
              *      Ownership is still maintained. It is not transferred!
              */
-            VkInstance getHandle() const;
+            VkInstance getHandle();
 
         private:
 

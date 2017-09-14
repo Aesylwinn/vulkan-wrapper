@@ -1,9 +1,17 @@
 #include "vw/instance.h"
 
+#include <cassert>
+
 #include "vw/exception.h"
+#include "vw/physicaldevice.h"
 
 namespace vw
 {
+    Instance::Instance()
+        : mHandle(VK_NULL_HANDLE)
+    {
+    }
+
     Instance::Instance(VkInstance handle)
         : mHandle(handle)
     {
@@ -28,16 +36,43 @@ namespace vw
         other.mHandle = temp;
     }
 
-    Instance::operator bool()
+    Instance::operator bool() const
     {
         return mHandle != VK_NULL_HANDLE;
     }
 
-    VkInstance Instance::getHandle() const
+    VkInstance Instance::getHandle()
     {
         return mHandle;
     }
 
+    Instance::PhysicalDeviceList Instance::enumeratePhysicalDevices()
+    {
+        assert(*this);
+
+        // Retrieve handles
+        uint32_t deviceCount = 0;
+        VkResult result = VK_SUCCESS;
+        std::vector<VkPhysicalDevice> handles;
+
+        result = vkEnumeratePhysicalDevices(mHandle, &deviceCount, nullptr);
+        if (result != VK_SUCCESS)
+            throw Exception("vw::Instance::enumeratePhysicalDevices", result);
+
+        handles.resize(deviceCount, VK_NULL_HANDLE);
+        result = vkEnumeratePhysicalDevices(mHandle, &deviceCount, handles.data());
+        if (result != VK_SUCCESS)
+            throw Exception("vw::Instance::enumeratePhysicalDevices", result);
+
+        // Construct and return result
+        PhysicalDeviceList devices;
+        for (VkPhysicalDevice handle : handles)
+        {
+            devices.push_back(PhysicalDevice(handle));
+        }
+
+        return devices;
+    }
 
     InstanceCreator::InstanceCreator()
     {

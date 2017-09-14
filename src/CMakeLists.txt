@@ -3,6 +3,7 @@ set(VW_SOURCE_FILES
     vw.cpp
     exception.cpp
     instance.cpp
+    physicaldevice.cpp
 )
 
 add_library(vwrapper SHARED ${VW_SOURCE_FILES})
