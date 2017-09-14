@@ -4,6 +4,7 @@
 #include <vw/exception.h>
 #include <vw/instance.h>
 #include <vw/physicaldevice.h>
+#include <vw/queuefamily.h>
 
 namespace vw
 {

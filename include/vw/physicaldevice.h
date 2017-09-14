@@ -3,9 +3,12 @@
 
 #include <vw/common.h>
 #include <array>
+#include <vector>
 
 namespace vw
 {
+    class QueueFamily;
+
     /*! @brief A wrapper for a VkPhysicalDevice object. */
     class PhysicalDevice
     {
@@ -21,9 +24,12 @@ namespace vw
             };
 
             using Uuid = std::array<uint8_t, VK_UUID_SIZE>;
+            using QueueFamilyList = std::vector<QueueFamily>;
 
             /*! @brief Constructs a PhysicalDevice that is valid only during the
              *      lifetime of the Instance it was obtained from.
+             *  @note It is possible for a physical device to be dropped when
+              *     there is faulty hardware.
              */
             explicit PhysicalDevice(VkPhysicalDevice handle);
 
@@ -74,9 +80,19 @@ namespace vw
              */
             const VkPhysicalDeviceSparseProperties& getDeviceSparseProperties() const;
 
+            /*! @brief Returns a list of descriptions for each queue on the
+             *      device.
+             */
+            QueueFamilyList getDeviceQueueFamilies() const;
+
+            /*! @brief Retrieves the underlying VkPhysicalDevice handle. The
+             *      lifetime of the handle does not change.
+             */
+            VkPhysicalDevice getHandle() const;
+
         private:
 
-            bool mValid;
+            VkPhysicalDevice mHandle;
             VkPhysicalDeviceProperties mProperties;
     };
 }

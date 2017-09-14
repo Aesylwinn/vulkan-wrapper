@@ -1,20 +1,21 @@
 #include "vw/physicaldevice.h"
 
+#include <cassert>
+
+#include "vw/queuefamily.h"
+
 namespace vw
 {
     PhysicalDevice::PhysicalDevice(VkPhysicalDevice handle)
-        : mValid(false)
+        : mHandle(handle)
     {
-        if (handle != VK_NULL_HANDLE)
-        {
-            vkGetPhysicalDeviceProperties(handle, &mProperties);
-            mValid = true;
-        }
+        if (*this)
+            vkGetPhysicalDeviceProperties(mHandle, &mProperties);
     }
 
     PhysicalDevice::operator bool() const
     {
-        return mValid;
+        return mHandle != VK_NULL_HANDLE;
     }
 
     uint32_t PhysicalDevice::getApiVersion() const
@@ -67,5 +68,32 @@ namespace vw
     const VkPhysicalDeviceSparseProperties& PhysicalDevice::getDeviceSparseProperties() const
     {
         return mProperties.sparseProperties;
+    }
+
+    PhysicalDevice::QueueFamilyList PhysicalDevice::getDeviceQueueFamilies() const
+    {
+        assert(*this);
+
+        // Read properties from device
+        uint32_t count = 0;
+        std::vector<VkQueueFamilyProperties> properties;
+
+        vkGetPhysicalDeviceQueueFamilyProperties(mHandle, &count, nullptr);
+        properties.resize(count);
+        vkGetPhysicalDeviceQueueFamilyProperties(mHandle, &count, properties.data());
+
+        // Return list
+        size_t index = 0;
+        QueueFamilyList list;
+        for (auto it : properties)
+        {
+            list.push_back(QueueFamily(index++, it));
+        }
+        return list;
+    }
+
+    VkPhysicalDevice PhysicalDevice::getHandle() const
+    {
+        return mHandle;
     }
 }

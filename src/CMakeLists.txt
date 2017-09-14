@@ -4,6 +4,7 @@ set(VW_SOURCE_FILES
     exception.cpp
     instance.cpp
     physicaldevice.cpp
+    queuefamily.cpp
 )
 
 add_library(vwrapper SHARED ${VW_SOURCE_FILES})
