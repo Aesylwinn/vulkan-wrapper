@@ -1,7 +1,9 @@
 #include "vw/instance.h"
 
 #include <cassert>
+#include <utility>
 
+#include "vw/debugcallback.h"
 #include "vw/exception.h"
 #include "vw/physicaldevice.h"
 
@@ -9,41 +11,45 @@ namespace vw
 {
     Instance::Instance()
         : mHandle(VK_NULL_HANDLE)
+        , mDebugCallback(VK_NULL_HANDLE)
     {
     }
 
     Instance::Instance(VkInstance handle)
         : mHandle(handle)
+        , mDebugCallback(VK_NULL_HANDLE)
     {
     }
 
     Instance::Instance(Instance&& other)
     {
         mHandle = other.mHandle;
+        mDebugCallback = other.mDebugCallback;
+        mDebugCallbackObj = other.mDebugCallbackObj;
         other.mHandle = VK_NULL_HANDLE;
+        other.mDebugCallback = VK_NULL_HANDLE;
+        other.mDebugCallbackObj.reset();
     }
 
     Instance::~Instance()
     {
         if (*this)
+        {
+            setDebugCallback(nullptr);
             vkDestroyInstance(mHandle, nullptr);
+        }
     }
 
     Instance& Instance::operator=(Instance&& other)
     {
-        VkInstance temp = mHandle;
-        mHandle = other.mHandle;
-        other.mHandle = temp;
+        std::swap(mHandle, other.mHandle);
+        std::swap(mDebugCallback, other.mDebugCallback);
+        std::swap(mDebugCallbackObj, other.mDebugCallbackObj);
     }
 
     Instance::operator bool() const
     {
         return mHandle != VK_NULL_HANDLE;
-    }
-
-    VkInstance Instance::getHandle()
-    {
-        return mHandle;
     }
 
     Instance::PhysicalDeviceList Instance::enumeratePhysicalDevices()
@@ -72,6 +78,75 @@ namespace vw
         }
 
         return devices;
+    }
+
+    VKAPI_ATTR VkBool32 instanceDebugCallback(VkDebugReportFlagsEXT flags,
+        VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
+        int32_t messageCode, const char* layerPrefix, const char* message,
+        void* userData)
+    {
+        DebugCallback* callback = static_cast<DebugCallback*>(userData);
+        assert(callback);
+
+        DebugCallback::CallbackData data;
+        data.flags = flags;
+        data.objectType = objectType;
+        data.location = location;
+        data.messageCode = messageCode;
+        data.layerPrefix = layerPrefix;
+        data.message = message;
+
+        if (callback->operator()(data))
+            return VK_TRUE;
+
+        return VK_FALSE;
+    }
+
+    void Instance::setDebugCallback(DebugCallbackPtr callback, bool verbose)
+    {
+        assert(*this);
+
+        // Destroy the old callback if it exists
+        if (mDebugCallback != VK_NULL_HANDLE)
+        {
+            auto vkDestroyDebugCallback = (PFN_vkDestroyDebugReportCallbackEXT)
+                vkGetInstanceProcAddr(mHandle, "vkDestroyDebugReportCallbackEXT");
+            vkDestroyDebugCallback(mHandle, mDebugCallback, nullptr);
+
+            mDebugCallback = VK_NULL_HANDLE;
+            mDebugCallbackObj.reset();
+        }
+
+        // Create the new callback
+        if (callback)
+        {
+            auto vkCreateDebugCallback = (PFN_vkCreateDebugReportCallbackEXT)
+                vkGetInstanceProcAddr(mHandle, "vkCreateDebugReportCallbackEXT");
+
+            VkDebugReportCallbackCreateInfoEXT cinfo;
+            cinfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+            cinfo.pNext = nullptr;
+            cinfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+            if (verbose)
+            {
+                cinfo.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+                cinfo.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
+                cinfo.flags |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+            }
+            cinfo.pfnCallback = instanceDebugCallback;
+            cinfo.pUserData = callback.get();
+
+            VkResult result = vkCreateDebugCallback(mHandle, &cinfo, nullptr, &mDebugCallback);
+            if (result != VK_SUCCESS)
+                throw Exception("vw::Instance::setDebugCallback", result);
+
+            mDebugCallbackObj = callback;
+        }
+    }
+
+    VkInstance Instance::getHandle()
+    {
+        return mHandle;
     }
 
     InstanceCreator::InstanceCreator()

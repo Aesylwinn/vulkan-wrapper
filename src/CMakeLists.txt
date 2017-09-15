@@ -1,6 +1,7 @@
 # src directory CMakeLists.txt
 set(VW_SOURCE_FILES
     vw.cpp
+    device.cpp
     exception.cpp
     instance.cpp
     physicaldevice.cpp

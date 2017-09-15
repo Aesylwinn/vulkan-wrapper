@@ -2,6 +2,8 @@
 #define VW_VW_H
 
 #include <vw/exception.h>
+#include <vw/device.h>
+#include <vw/debugcallback.h>
 #include <vw/instance.h>
 #include <vw/physicaldevice.h>
 #include <vw/queuefamily.h>

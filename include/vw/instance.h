@@ -2,10 +2,12 @@
 #define VW_INSTANCE_H
 
 #include <vw/common.h>
+#include <memory>
 #include <vector>
 
 namespace vw
 {
+    struct DebugCallback;
     class PhysicalDevice;
 
     /*! @brief A wrapper for a VkInstance object. */
@@ -14,6 +16,7 @@ namespace vw
         public:
 
             using PhysicalDeviceList = std::vector<PhysicalDevice>;
+            using DebugCallbackPtr = std::shared_ptr<DebugCallback>;
 
             /*! @brief Constructs an invalid Instance.
              */
@@ -49,6 +52,13 @@ namespace vw
              */
             PhysicalDeviceList enumeratePhysicalDevices();
 
+            /*! @brief Sets up the debug callback. Only a single callback is
+             *      allowed.
+             *  @note The validation layer and debug callback extension both
+             *      need to have been specified when creating the instance.
+             */
+            void setDebugCallback(DebugCallbackPtr callback, bool verbose=false);
+
             /*! @brief Retrieves the handle to the underlying VkInstance.
              *      Ownership is still maintained. It is not transferred!
              */
@@ -60,6 +70,9 @@ namespace vw
             Instance& operator=(const Instance&) = delete;
 
             VkInstance mHandle;
+
+            VkDebugReportCallbackEXT mDebugCallback;
+            DebugCallbackPtr mDebugCallbackObj;
     };
 
     /*! @brief A convenience class for creating an Instance.

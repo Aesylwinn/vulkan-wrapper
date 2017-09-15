@@ -1,6 +1,37 @@
 #include "vw/vw.h"
 
+#include <algorithm>
 #include <iostream>
+
+struct DebugCallback : public vw::DebugCallback
+{
+    bool operator()(const CallbackData& data) override
+    {
+        std::cout << "Validation layers: " << data.message << "\n";
+        return false;
+    }
+};
+
+struct DevicePriority
+{
+    bool operator()(const vw::PhysicalDevice& a, const vw::PhysicalDevice& b)
+    {
+        return getPriority(a.getDeviceType()) < getPriority(b.getDeviceType());
+    }
+
+    int getPriority(vw::PhysicalDevice::Type type)
+    {
+        switch (type)
+        {
+            case vw::PhysicalDevice::Type_DiscreteGpu:      return 0;
+            case vw::PhysicalDevice::Type_VirtualGpu:       return 1;
+            case vw::PhysicalDevice::Type_IntegratedGpu:    return 2;
+            case vw::PhysicalDevice::Type_Cpu:              return 3;
+            case vw::PhysicalDevice::Type_Other:            return 4;
+            default:                                        return 5;
+        }
+    }
+};
 
 int main(int argc, const char * const argv[])
 {
@@ -8,6 +39,8 @@ int main(int argc, const char * const argv[])
     vw::InstanceCreator instanceCtor;
     instanceCtor.setApplicationName("vwTest");
     instanceCtor.setApplicationVersion(1);
+    instanceCtor.addLayer("VK_LAYER_LUNARG_standard_validation");
+    instanceCtor.addExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
     vw::Instance instance;
 
@@ -23,6 +56,8 @@ int main(int argc, const char * const argv[])
         std::cout << ex.getErrorMessage() << "\n";
         std::exit(0);
     }
+
+    instance.setDebugCallback(std::make_shared<DebugCallback>());
 
     vw::Instance::PhysicalDeviceList physicalDevices;
     physicalDevices = instance.enumeratePhysicalDevices();
@@ -55,6 +90,55 @@ int main(int argc, const char * const argv[])
                 family.getMinImageTransferGranularity().height << ", " <<
                 family.getMinImageTransferGranularity().depth << ")\n\n";
         }
+    }
+
+    // Create a device.
+    vw::DeviceCreator deviceCtor;
+    deviceCtor.addLayer("VK_LAYER_LUNARG_standard_validation");
+    deviceCtor.addExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
+    std::sort(physicalDevices.begin(), physicalDevices.end(), DevicePriority());
+    bool devSelected = false;
+
+    for (auto dev : physicalDevices)
+    {
+        deviceCtor.setPhysicalDevice(dev);
+
+        for (auto family : dev.getDeviceQueueFamilies())
+        {
+            if (family.hasGraphicsSupport())
+            {
+                vw::DeviceCreator::PriorityList priorityList;
+                priorityList.resize(family.getQueueCount(), 1.0f);
+
+                deviceCtor.addQueues(family, priorityList);
+                devSelected = true;
+            }
+        }
+
+        if (devSelected)
+            break;
+    }
+
+    if (!devSelected)
+    {
+        std::cout << "No device with vulkan graphics support was found.\n";
+        std::exit(0);
+    }
+
+    vw::Device device;
+
+    try
+    {
+        std::cout << "Attempting to create a Device.\n";
+        device = deviceCtor.create();
+        std::cout << "Successfully created a Device.\n";
+    }
+    catch (const vw::Exception& ex)
+    {
+        std::cout << "Failed to create a Device.\n";
+        std::cout << ex.getErrorMessage() << "\n";
+        std::exit(0);
     }
 
     std::exit(0);
