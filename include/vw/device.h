@@ -2,6 +2,7 @@
 #define VW_DEVICE_H
 
 #include <vw/common.h>
+#include <vw/queue.h>
 #include <vector>
 
 namespace vw
@@ -15,14 +16,74 @@ namespace vw
     {
         public:
 
+            /*! @brief A wrapper for a container allowing non-const access to
+             *      the data, but not allowing modifications to the container.
+             */
+            class QueueList {
+                public:
+
+                    using Container = std::vector<Queue>;
+                    using iterator = Container::iterator;
+                    using const_iterator = Container::const_iterator;
+                    using size_type = Container::size_type;
+
+                    /*! @brief Constructs a QueueList with the given data.
+                     */
+                    QueueList(Container container);
+
+                    /*! @brief Loots the other's data.
+                     */
+                    QueueList(QueueList&& other);
+
+                    /*! @brief Swaps data with the other.
+                     */
+                    QueueList& operator=(QueueList&& other);
+
+                    /*! @brief Returns an iterator to the beginning element.
+                     */
+                    iterator begin();
+
+                    /*! @brief Returns a constant iterator to the beginning
+                     *      element.
+                     */
+                    const_iterator begin() const;
+
+                    /*! @brief Returns an iterator to the past-the-end element.
+                     */
+                    iterator end();
+
+                    /*! @brief Returns a constant iterator to the past-the-end
+                     *      element.
+                     */
+                    const_iterator end() const;
+
+                    /*! @brief Returns a constant iterator to the beginning
+                     *      element.
+                     */
+                    const_iterator cbegin() const;
+
+                    /*! @brief Returns a constant iterator to the past-the-end
+                     *      element.
+                     */
+                    const_iterator cend() const;
+
+                    /*! @brief Returns the number of elements in the container.
+                     */
+                    size_type size();
+
+                private:
+
+                    Container mContainer;
+            };
+
             /*! @brief Constructs an invalid Device.
              */
             Device();
 
-            /*! @brief Constructs a Device with the specified handle. Ownership
-             *      of the handle is assumed.
+            /*! @brief Constructs a Device with the specified handle and queues.
+             *      Ownership of the handle is assumed.
              */
-            explicit Device(VkDevice handle);
+            Device(VkDevice handle, QueueList queues);
 
             /*! @brief Move constructor that loots the other's VkDevice handle.
              */
@@ -40,6 +101,14 @@ namespace vw
              */
             operator bool() const;
 
+            /*! @brief Retrieves the queues created with this device.
+             */
+            QueueList& getQueues();
+
+            /*! @brief Retrieves the queues created with this device.
+             */
+            const QueueList& getQueues() const;
+
             /*! @brief Retrieve the underlying VkDevice handle of the object.
              */
             VkDevice getHandle();
@@ -50,6 +119,7 @@ namespace vw
             Device& operator=(const Device& other) = delete;
 
             VkDevice mHandle;
+            QueueList mQueues;
     };
 
     /*! @brief A convenience class for creating a Device.

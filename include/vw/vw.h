@@ -6,6 +6,7 @@
 #include <vw/debugcallback.h>
 #include <vw/instance.h>
 #include <vw/physicaldevice.h>
+#include <vw/queue.h>
 #include <vw/queuefamily.h>
 
 namespace vw

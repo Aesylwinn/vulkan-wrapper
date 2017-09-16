@@ -5,6 +5,7 @@ set(VW_SOURCE_FILES
     exception.cpp
     instance.cpp
     physicaldevice.cpp
+    queue.cpp
     queuefamily.cpp
 )
 

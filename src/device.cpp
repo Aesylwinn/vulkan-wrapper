@@ -1,6 +1,7 @@
 #include "vw/device.h"
 
 #include <cassert>
+#include <utility>
 
 #include "vw/exception.h"
 #include "vw/physicaldevice.h"
@@ -8,19 +9,72 @@
 
 namespace vw
 {
-    Device::Device()
-        : mHandle(VK_NULL_HANDLE)
+    Device::QueueList::QueueList(Container container)
+        : mContainer(std::move(container))
     {
     }
 
-    Device::Device(VkDevice handle)
+    Device::QueueList::QueueList(QueueList&& other)
+        : mContainer(std::move(other.mContainer))
+    {
+    }
+
+    Device::QueueList& Device::QueueList::operator=(QueueList&& other)
+    {
+        std::swap(mContainer, other.mContainer);
+    }
+
+    Device::QueueList::iterator Device::QueueList::begin()
+    {
+        return mContainer.begin();
+    }
+
+    Device::QueueList::const_iterator Device::QueueList::begin() const
+    {
+        return mContainer.begin();
+    }
+
+    Device::QueueList::iterator Device::QueueList::end()
+    {
+        return mContainer.end();
+    }
+
+    Device::QueueList::const_iterator Device::QueueList::end() const
+    {
+        return mContainer.end();
+    }
+
+    Device::QueueList::const_iterator Device::QueueList::cbegin() const
+    {
+        return mContainer.cbegin();
+    }
+
+    Device::QueueList::const_iterator Device::QueueList::cend() const
+    {
+        return mContainer.cend();
+    }
+
+    Device::QueueList::size_type Device::QueueList::size()
+    {
+        return mContainer.size();
+    }
+
+    Device::Device()
+        : mHandle(VK_NULL_HANDLE)
+        , mQueues(QueueList::Container())
+    {
+    }
+
+    Device::Device(VkDevice handle, QueueList queues)
         : mHandle(handle)
+        , mQueues(std::move(queues))
     {
     }
 
     Device::Device(Device&& other)
+        : mHandle(other.mHandle)
+        , mQueues(std::move(other.mQueues))
     {
-        mHandle = other.mHandle;
         other.mHandle = VK_NULL_HANDLE;
     }
 
@@ -32,14 +86,23 @@ namespace vw
 
     Device& Device::operator=(Device&& other)
     {
-        VkDevice temp = mHandle;
-        mHandle = other.mHandle;
-        other.mHandle = temp;
+        std::swap(mHandle, other.mHandle);
+        std::swap(mQueues, other.mQueues);
     }
 
     Device::operator bool() const
     {
         return mHandle != VK_NULL_HANDLE;
+    }
+
+    Device::QueueList& Device::getQueues()
+    {
+        return mQueues;
+    }
+
+    const Device::QueueList& Device::getQueues() const
+    {
+        return mQueues;
     }
 
     VkDevice Device::getHandle()
@@ -110,6 +173,7 @@ namespace vw
         assert(mPhysicalDevice != VK_NULL_HANDLE);
         assert(!mQueuePriorities.empty());
 
+        // Create device
         std::vector<const char*> layers;
         for (const std::string& layer : mLayers)
             layers.push_back(layer.c_str());
@@ -130,13 +194,27 @@ namespace vw
         deviceCInfo.ppEnabledExtensionNames = extensions.data();
         deviceCInfo.pEnabledFeatures = (mDefineEnabledFeatures) ? &mEnabledFeatures : nullptr;
 
-        VkDevice handle = VK_NULL_HANDLE;
-        VkResult result = vkCreateDevice(mPhysicalDevice, &deviceCInfo, nullptr, &handle);
+        VkDevice deviceHandle = VK_NULL_HANDLE;
+        VkResult result = vkCreateDevice(mPhysicalDevice, &deviceCInfo, nullptr, &deviceHandle);
         if (result != VK_SUCCESS)
         {
             throw Exception("vw::DeviceCreator::create", result);
         }
 
-        return Device(handle);
+        // Retrieve queues
+        Device::QueueList::Container queues;
+        for (const VkDeviceQueueCreateInfo& info : mQueueInfos)
+        {
+            uint32_t family = info.queueFamilyIndex;
+            for (uint32_t index = 0; index < info.queueCount; ++index)
+            {
+
+                VkQueue queueHandle = VK_NULL_HANDLE;
+                vkGetDeviceQueue(deviceHandle, family, index, &queueHandle);
+                queues.push_back(Queue(family, index, queueHandle));
+            }
+        }
+
+        return Device(deviceHandle, Device::QueueList(queues));
     }
 }

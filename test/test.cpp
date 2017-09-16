@@ -141,6 +141,13 @@ int main(int argc, const char * const argv[])
         std::exit(0);
     }
 
+    std::cout << "Created queues:\n\n";
+    for (auto& queue : device.getQueues())
+    {
+        std::cout << "Queue family: " << queue.getFamilyIndex() << "\n";
+        std::cout << "Queue index: " << queue.getQueueIndex() << "\n\n";
+    }
+
     std::exit(0);
 }
 

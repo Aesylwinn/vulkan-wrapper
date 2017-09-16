@@ -22,10 +22,10 @@ namespace vw
     }
 
     Instance::Instance(Instance&& other)
+        : mHandle(other.mHandle)
+        , mDebugCallback(other.mDebugCallback)
+        , mDebugCallbackObj(other.mDebugCallbackObj)
     {
-        mHandle = other.mHandle;
-        mDebugCallback = other.mDebugCallback;
-        mDebugCallbackObj = other.mDebugCallbackObj;
         other.mHandle = VK_NULL_HANDLE;
         other.mDebugCallback = VK_NULL_HANDLE;
         other.mDebugCallbackObj.reset();
